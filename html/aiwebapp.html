@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #ccc;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            line-height: 50px;
+            background-color: white;
+        }
+
+        .cell.green {
+            background-color: #6aaa64;
+            color: white;
+        }
+
+        .cell.yellow {
+            background-color: #c9b458;
+            color: white;
+        }
+
+        .cell.gray {
+            background-color: #787c7e;
+            color: white;
+        }
+
+        .input-box {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        input {
+            width: 60px;
+            height: 40px;
+            font-size: 24px;
+            text-align: center;
+            margin: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #6aaa64; /* Green color for Submit button */
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        button:hover {
+            background-color: #5c934f; /* Slightly darker green for hover effect */
+        }
+
+        .message {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        .play-again {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .play-again-button {
+            background-color: #6aaa64; /* Set to the same green as the correct letters */
+        }
+
+        .play-again-button:hover {
+            background-color: #5c934f; /* Slightly darker green for hover effect */
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>Wordle Game</h1>
+    <div class="grid" id="grid"></div>
+    <div class="input-box">
+        <input type="text" id="guess-input" maxlength="5" />
+        <button onclick="submitGuess()">Submit</button>
+    </div>
+    <div class="message" id="message"></div>
+    <div class="play-again">
+        <button class="play-again-button" onclick="startNewGame()">Play Again</button>
+    </div>
+</div>
+
+<script>
+    const WORD_LIST = ['apple', 'baker', 'catty', 'doggy', 'eagle']; // You can replace it with a larger list
+    const WORD_LENGTH = 5;
+    const MAX_TRIES = 6;
+
+    let targetWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+    let guesses = [];
+    let currentGuess = '';
+
+    // Create grid for the game (Ensure the grid is set up at the start)
+    const gridElement = document.getElementById('grid');
+    
+    // Initialize the grid layout (6 rows and 5 columns)
+    function initializeGrid() {
+        gridElement.innerHTML = '';  // Clear previous grid
+        for (let i = 0; i < MAX_TRIES; i++) {
+            for (let j = 0; j < WORD_LENGTH; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                gridElement.appendChild(cell);
+            }
+        }
+    }
+    initializeGrid(); // Initialize the grid when the page loads
+
+    // Submit the guess
+    function submitGuess() {
+        const guessInput = document.getElementById('guess-input');
+        currentGuess = guessInput.value.trim().toLowerCase();
+
+        if (currentGuess.length !== WORD_LENGTH) {
+            alert("Please enter a 5-letter word.");
+            return;
+        }
+
+        // Add the guess to the guesses array
+        guesses.push(currentGuess);
+        displayGuess(currentGuess);
+        checkGuess(currentGuess);
+
+        guessInput.value = ''; // Clear the input field
+
+        // Check if the player has won or exhausted the tries
+        if (currentGuess === targetWord) {
+            document.getElementById('message').textContent = "Congratulations, you've won!";
+            showPlayAgainButton();
+        } else if (guesses.length === MAX_TRIES) {
+            document.getElementById('message').textContent = `Game Over! The word was: ${targetWord}`;
+            showPlayAgainButton();
+        }
+    }
+
+    // Display the guess in the grid with color feedback (green, yellow, gray)
+    function displayGuess(guess) {
+        const gridCells = document.getElementsByClassName('cell');
+        let cellIndex = (guesses.length - 1) * WORD_LENGTH; // Start at the correct row for the guess
+
+        for (let i = 0; i < WORD_LENGTH; i++) {
+            gridCells[cellIndex + i].textContent = guess[i].toUpperCase();
+        }
+    }
+
+    // Check the guess against the target word and apply feedback (green, yellow, gray)
+    function checkGuess(guess) {
+        const gridCells = document.getElementsByClassName('cell');
+        const targetWordArr = targetWord.split('');
+        let feedback = [];
+        let targetWordCopy = [...targetWordArr]; // To handle yellow feedback properly
+
+        // First pass: Check for exact matches (green)
+        for (let i = 0; i < WORD_LENGTH; i++) {
+            if (guess[i] === targetWordArr[i]) {
+                feedback.push('green');
+                gridCells[(guesses.length - 1) * WORD_LENGTH + i].classList.add('green');
+                targetWordCopy[i] = null; // Remove the matched letter from targetWordCopy to prevent duplicate yellows
+            } else {
+                feedback.push(null);
+            }
+        }
+
+        // Second pass: Check for letters that are in the word but in the wrong position (yellow)
+        for (let i = 0; i < WORD_LENGTH; i++) {
+            if (!feedback[i] && targetWordCopy.includes(guess[i])) {
+                feedback[i] = 'yellow';
+                gridCells[(guesses.length - 1) * WORD_LENGTH + i].classList.add('yellow');
+                targetWordCopy[targetWordCopy.indexOf(guess[i])] = null; // Prevent matching the same letter again
+            }
+        }
+
+        // Third pass: Any remaining unmatched letters (gray)
+        for (let i = 0; i < WORD_LENGTH; i++) {
+            if (!feedback[i]) {
+                gridCells[(guesses.length - 1) * WORD_LENGTH + i].classList.add('gray');
+            }
+        }
+    }
+
+    // Show the Play Again button after game is over (win or max tries reached)
+    function showPlayAgainButton() {
+        document.querySelector('.play-again').style.display = 'block';
+        document.querySelector('.play-again-button').style.backgroundColor = '#6aaa64'; // Green color
+    }
+
+    // Start a new game
+    function startNewGame() {
+        // Reset game state
+        guesses = [];
+        targetWord = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)];
+        currentGuess = '';
+
+        // Clear grid and message
+        document.getElementById('message').textContent = '';
+        document.querySelector('.play-again').style.display = 'none';
+        document.querySelector('.play-again-button').style.backgroundColor = '#5c6bc0'; // Reset to original color
+        initializeGrid(); // Reset grid
+    }
+
+    // Add event listener for "Enter" key
+    document.getElementById('guess-input').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            submitGuess(); // Trigger submitGuess when "Enter" is pressed
+        }
+    });
+</script>
+
+</body>
+</html>
